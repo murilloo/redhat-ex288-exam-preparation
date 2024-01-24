@@ -1,0 +1,152 @@
+lab start pipelines-review
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project pipelines-review
+cd /home/student/DO288/labs/pipelines-review
+tkn ct describe git-clone
+
+Edit the pipeline.yaml file and configure the clone-repository task:
+
+...file omitted...
+  tasks:
+    - name: clone-repository
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: $(params.GIT_REPO)
+        - name: revision
+          value: $(params.GIT_REVISION)
+        - name: deleteExisting
+          value: 'true'
+        - name: sslVerify
+          value: 'false'
+      workspaces:
+        - name: output
+          workspace: shared
+
+
+In the task.yaml 
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: maven-task
+spec:
+  workspaces:
+  - name: source
+  - name: maven_config
+  params:
+  - name: app_path
+    description: Path to the application source code in the directory
+    type: string
+  steps:
+    - name: build
+      image: registry.ocp4.example.com:8443/ubi8/openjdk-11:1.16-3
+      workingDir: $(workspaces.source.path)/$(params.app_path)
+      script: |
+        mvn clean package -s $(workspaces.maven_config.path)/settings.xml
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+
+oc create -f task.yaml
+
+In the pipeline.yaml file, configure the build task:
+
+...file omitted...
+  tasks:
+...file omitted...
+    - name: build
+      taskRef:
+        name: maven-task
+        kind: Task
+      params:
+      - name: app_path
+        value: $(params.MVN_APP_PATH)
+      runAfter:
+        - clone-repository
+      workspaces:
+        - workspace: shared
+          name: source
+        - workspace: maven_config
+          name: maven_config
+...file omitted...
+
+tkn ct describe openshift-client
+
+Configure pipeline
+
+...file omitted...
+  tasks:
+...file omitted...
+    - name: oc-deploy
+      runAfter:
+        - "build"
+      taskRef:
+        name: openshift-client
+        kind: ClusterTask
+      workspaces:
+        - name: manifest-dir
+          workspace: shared
+      params:
+        - name: SCRIPT
+          value: |
+            cd  "$(workspaces.manifest-dir.path)/$(params.MVN_APP_PATH)" || exit 1
+            oc new-build --name=$(params.DEPLOY_APP_NAME) \
+              -l app=$(params.DEPLOY_APP_NAME)  --binary=true \
+              --image-stream=openshift/java:8 || echo "BC already exists"
+            oc start-build $(params.DEPLOY_APP_NAME) --wait=true \
+              --from-file=$(params.DEPLOY_ARTIFACT_NAME)
+            oc new-app $(params.DEPLOY_APP_NAME):latest \
+              --name $(params.DEPLOY_APP_NAME) || echo "application exists"
+            oc expose svc $(params.DEPLOY_APP_NAME) || echo "route exists"
+...file omitted...
+
+tkn ct describe skopeo-copy-internal
+
+Configure the pipeline YAML file.
+
+...file omitted...
+    - name: skopeo-copy
+      runAfter:
+          - "oc-deploy"
+      taskRef:
+        name: skopeo-copy-internal
+        kind: ClusterTask
+      params:
+        - name: srcImageURL
+          value: docker://default-route-openshift-image-registry.apps.ocp4.example.com/pipelines-review/$(params.DEPLOY_APP_NAME)
+        - name: destImageURL
+          value: docker://registry.ocp4.example.com:8443/developer/$(params.DEPLOY_APP_NAME)
+        - name: image
+          value: registry.ocp4.example.com:8443/ubi9/skopeo:9.2
+
+oc create -f pipeline.yaml
+
+oc create -f run.yaml
+
+tkn pipeline logs -f -a maven-java-pipeline
+
+tkn pipeline list
+
+curl -s vertx-site-pipelines-review.apps.ocp4.example.com; echo
+
+lab grade pipelines-review
+lab finish pipelines-review
+
+
+
+Summary
+
+Continuous integration and continuous delivery/deployment (CI/CD) practices enable fast delivery cycles, high reliability, short feedback loops, and low lead times.
+The foundation of OpenShift Pipelines is Tekton, an open source, cloud-native framework for implementing CI/CD pipelines.
+A pipeline is a series of actions that typically build, test, release, and deploy applications.
+OpenShift Pipelines uses custom resources to manage the main building blocks of pipelines, such as Pipeline and Task.
+
+
+Know how to:
+- Work with OpenShift Pipelines
+- Create tekton pipeline, run, stop, check logs
+- Create tekton pipeline 
+- Configure and trigger Pipeline workflows for applications

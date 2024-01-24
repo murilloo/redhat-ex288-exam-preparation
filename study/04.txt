@@ -1,0 +1,56 @@
+lab start builds-review
+
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project builds-review
+cd ~/DO288/DO288-apps/apps/builds-review/expense-service
+
+oc new-app --name expense-service \
+--strategy Docker \
+--context-dir apps/builds-review/expense-service \
+https://git.ocp4.example.com/developer/DO288-apps
+
+oc logs -f buildconfig/expense-service
+
+oc get po
+oc logs deploy/expense-service
+
+mvn -Dmaven.compiler.release=11 clean package
+ls target/*runner*
+oc debug deploy/expense-service
+ls target/
+ls
+
+Open Dockerfile and change to:
+
+RUN mvn dependency:go-offline
+
+COPY src src
+RUN mvn clean package
+
+CMD ["java", "-jar", "target/expense-service-1.0.0-SNAPSHOT-runner.jar"]
+
+git commit -am "fix: correct dockerfile"
+git push developer/developer
+
+oc start-build bc/expense-service --follow
+oc get po
+oc expose svc expense-service
+curl -s expense-service-builds-review.apps.ocp4.example.com/expenses | jq
+
+lab grade builds-review
+lab finish builds-review
+
+Summary
+
+A BuildConfig resource includes one strategy and one or more input sources.
+You can use Source, Docker, or Custom build strategies.
+The build input sources, in order of precedence are: Dockerfile, Git, Image, Binary, Input Secrets, and External artifacts.
+Manage the build lifecycle with oc commands such as oc start-build, oc cancel-build, oc delete, oc describe, and oc logs.
+Builds can start automatically through build triggers such as an image change trigger, configuration change triggers, and webhooks triggers.
+You can perform validation and administrative tasks during builds by using post-commit build hooks.
+
+Know how to:
+- Create a build hook that runs a provided script
+- Test and confirm proper operation of the hook
+- Manage and trigger application builds
+- Memorize oc commands for managing builds

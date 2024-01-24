@@ -1,0 +1,95 @@
+lab start deployments-review
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project deployments-review
+
+Create pvc.yml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  storageClassName: nfs-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+
+oc create -f pvc.yaml
+
+oc describe pvc postgres-pvc
+
+oc get dc/postgresql -o yaml | grep -C3 postgresql-data
+
+oc edit dc/postgresql
+
+      - persistentVolumeClaim:
+          claimName: postgres-pvc
+
+oc set volume dc/postgresql --add --name=postgresql-data -t pvc --claim-name=postgres-pvc --mount-path /var/lib/pgsql/data --overwrite
+oc new-app --name=expense-service --image=registry.ocp4.example.com:8443/redhattraining/ocpdev-deployments-review:4.12
+oc set env deploy/expense-service --from=secret/postgresql
+
+oc edit deploy/expense-service
+
+spec:
+  containers:
+  - env:
+    - name: DATABASE_NAME
+      valueFrom:
+        secretKeyRef:
+          key: database-name
+          name: postgresql
+    - name: QUARKUS_DATASOURCE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: database-password
+          name: postgresql
+    - name: QUARKUS_DATASOURCE_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: database-user
+          name: postgresql
+
+oc set env deploy/expense-service QUARKUS_DATASOURCE_JDBC_URL='jdbc:postgresql://postgresql:5432/$(DATABASE_NAME)'
+
+oc describe deploy/expense-service | grep -A4 Environment
+
+oc expose svc expense-service
+
+curl -s expense-service-deployments-review.apps.ocp4.example.com/expenses | jq
+
+oc set probe deploy/expense-service \
+--liveness --get-url=http://:8080/q/health/live --timeout-seconds=1 \
+--initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 \
+--period-seconds=5
+
+oc set probe deploy/expense-service \
+--readiness --get-url=http://:8080/q/health/ready --timeout-seconds=1 \
+--initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 \
+--period-seconds=5
+
+
+oc describe deploy/expense-service | grep "http-get"
+
+lab grade deployments-review
+lab finish deployments-review
+
+
+Summary
+
+Deploy stateless applications by using the Deployment or DeploymentConfig resources.
+You can use a deployment strategy to adjust deployments based on the cluster resources, and your downtime and backwards compatibility requirements.
+Decouple your application from the environment by storing configuration in secrets and configuration maps.
+You can inject secrets and configuration maps into pods as environment variables or volumes.
+Deploy stateful applications, such as databases, by using the StatefulSet resource.
+Use persistent volume claims to request storage requirements in your applications.
+Use health checks to monitor the status of your applications.
+
+Know how to:
+- Work with configuration maps
+- Create configuration maps
+- Create secret resources
+- Use configuration maps to inject data into applications

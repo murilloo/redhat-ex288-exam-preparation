@@ -1,0 +1,113 @@
+lab start compreview-todo
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project compreview-cicd
+cd ~/DO288/labs/compreview-cicd
+oc apply -f npm-task.yaml
+
+Open the /home/student/DO288/labs/compreview-cicd/pipeline.yaml 
+
+    - name: fetch-repository
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: $(params.GIT_REPO)
+        - name: revision
+          value: $(params.GIT_REVISION)
+        - name: deleteExisting
+          value: "true"
+        - name: sslVerify
+          value: "false"
+      workspaces:
+        - name: output
+          workspace: shared
+
+Configure the npm-install task as follows:
+
+    - name: npm-install
+      taskRef:
+        name: npm
+        kind: Task
+      workspaces:
+        - name: source
+          workspace: shared
+      params:
+        - name: CONTEXT
+          value: $(params.APP_PATH)
+        - name: ARGS
+          value: install --no-package-lock
+      runAfter:
+        - fetch-repository
+
+Configure the npm-lint task as follows:
+
+    - name: npm-lint
+      taskRef:
+        name: npm
+        kind: Task
+      workspaces:
+        - name: source
+          workspace: shared
+      params:
+        - name: CONTEXT
+          value: $(params.APP_PATH)
+        - name: ARGS
+          value: run lint
+      runAfter:
+        - npm-install
+
+Configure the build-push-image task as follows:
+
+   - name: build-push-image
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: $(params.IMAGE_REGISTRY)/$(context.pipelineRun.namespace)/$(params.IMAGE_NAME):$(context.pipelineRun.uid)
+        - name: DOCKERFILE
+          value: ./Containerfile
+        - name: CONTEXT
+          value: $(params.APP_PATH)
+      workspaces:
+        - name: source
+          workspace: shared
+      runAfter:
+        - npm-test
+        - npm-lint
+
+Configure the oc-deploy task as follows:
+
+    - name: oc-deploy
+      runAfter:
+        - build-push-image
+      taskRef:
+        name: openshift-client
+        kind: ClusterTask
+      workspaces:
+        - name: manifest-dir
+          workspace: shared
+      params:
+        - name: SCRIPT
+          value: |
+            oc process -f $(params.APP_PATH)/kubefiles/app.yaml \
+            -p IMAGE_NAME=$(params.IMAGE_REGISTRY)/$(context.pipelineRun.namespace)/$(params.IMAGE_NAME):$(context.pipelineRun.uid) \
+            | oc apply -f -
+
+oc apply -f pipeline.yaml
+
+tkn pipeline start \
+--use-param-defaults words-cicd-pipeline \
+-p APP_PATH=apps/compreview-cicd/words \
+-w name=shared,volumeClaimTemplateFile=volume-template.yaml
+
+tkn pr list
+
+tkn pr logs -f PIPELINE_RUN_NAME
+
+curl -s http://words-compreview-cicd.apps.ocp4.example.com/word/hello | jq
+
+
+lab grade compreview-cicd
+lab finish compreview-cicd

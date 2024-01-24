@@ -1,0 +1,41 @@
+Chapter 2
+- Manage applications with the web console
+- Create and work with multiple projects
+- Create and deploy single container and multi-container from Git, specific from a directory, from an image, from stream
+- Use application health monitoring
+- Configure the OpenShift internal registry
+
+Chapter 3
+- Create, build, publish container images, manage it from Git, optmize Containerfile
+- Configure external registry (try out locally with quay.io, docker repo)
+- Create, tag, operate, list, inspect, search image streams
+- Create trigger updates on image stream changes
+- Debug minor issues with application deployment
+
+Chapter 4
+- Create a build hook that runs a provided script
+- Test and confirm proper operation of the hook
+- Manage and trigger application builds
+- Memorize oc commands for managing builds
+- Build and deploy applications using S2I
+- Customize existing S2I builder images
+
+Chapter 5
+- Work with configuration maps
+- Create configuration maps
+- Create secret resources
+- Use configuration maps to inject data into applications
+
+Chapter 6
+- Create an OpenShift template template
+- Create and use Helm charts (memorize directory structure for helm)
+- Customizing deployments with Kustomize
+- Use pre-existing templates written in either JSON or YAML format
+- Work with multi-container templates
+- Add custom parameters to a template
+
+Chapter 7
+- Work with OpenShift Pipelines
+- Create tekton pipeline, run, stop, check logs
+- Create tekton pipeline 
+- Configure and trigger Pipeline workflows for applications

@@ -1,0 +1,16 @@
+{
+  "name": "nodejs-hello-world",
+  "version": "1.0.0",
+  "description": "Hello World App",
+  "main": "server.js",
+  "author": "Demo App",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "4.17",
+    "html-errors": "latest"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,38 @@
+lab start images-review
+cd ~/DO288/labs/images-review
+cat Containerfile
+podman login -u developer -p developer registry.ocp4.example.com:8443
+podman build . -t registry.ocp4.example.com:8443/developer/custom-server:1.0.0
+podman push registry.ocp4.example.com:8443/developer/custom-server:1.0.0
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project images-review
+
+oc create secret docker-registry \
+  registry-credentials \
+  --docker-server=registry.ocp4.example.com:8443 \
+  --docker-username=developer \
+  --docker-password=developer \
+  --docker-email=developer@example.org
+  
+oc secrets link default registry-credentials --for=pull
+oc import-image custom-server --confirm --from registry.ocp4.example.com:8443/developer/custom-server:1.0.0
+oc new-app --name custom-server -i images-review/custom-server
+oc get pod
+oc expose svc custom-server
+oc get route
+curl http://custom-server-images-review.apps.ocp4.example.com
+lab grade images-review
+lab finish images-review
+
+Summary
+
+To authorize OpenShift with an external registry, store credentials for authorizing the registry in OpenShift and associate the credentials with your service account.
+Image streams are an OpenShift specific resource that you can use to reference container images by using an intermediate name that points to an image from a container registry.
+An image stream represents one or more sets of container images. Each set, or stream, is identified by an image stream tag, which contains a historic list of the container images that the image stream tag referenced along with the container image in use.
+
+Know how to:
+- Create, build, publish container images, manage it from Git, optmize Containerfile
+- Configure external registry (try out locally with quay.io, docker repo)
+- Create, tag, operate, list, inspect, search image streams
+- Create trigger updates on image stream changes
+- Debug minor issues with application deployment

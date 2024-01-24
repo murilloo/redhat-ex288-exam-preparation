@@ -1,0 +1,139 @@
+lab start multicontainer-review
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project multicontainer-review
+cd ~/DO288/labs/multicontainer-review/famous-quotes
+
+mv \
+ configmap.yaml \
+ deployment.yaml \
+ route.yaml \
+ service.yaml \
+templates/
+
+mv redis-persistent-0.0.1.tgz charts/
+
+tree ./
+
+./
+├── charts
+│   └── redis-persistent-0.0.1.tgz
+├── Chart.yaml
+├── templates
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   ├── route.yaml
+│   └── service.yaml
+└── values.yaml
+
+
+helm template ./ | grep  "# Source:" | sort
+
+Edit the templates/deployment.yaml template to use the quotes.image value.
+
+    spec:
+      containers:
+      - name: famous-quotes
+        image: {{ .Values.quotes.image }}
+
+Edit the templates/deployment.yaml 
+
+        - name: DATASTORE_PASS
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: {{ .Values.redis.database_service_name }}
+      {{- if .Values.quotes.import.enabled }}
+        - name: QUOTES_IMPORT_PATH
+          value: /tmp/quotes/import_quotes.csv
+        volumeMounts:
+          - name: import-volume
+            mountPath: /tmp/quotes
+      volumes:
+        - name: import-volume
+          configMap:
+            name: quotes-import-data
+      {{- end }}
+
+helm template ./ --set quotes.import.enabled=false | grep -A 28 "famous-quotes/templates/deployment.yaml"
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: famous-quotes
+...output omitted...
+      containers:
+      - name: famous-quotes
+        image: registry.ocp4.example.com:8443/redhattraining/ocpdev-redis-quotes:4.12
+        imagePullPolicy: Always
+        env:
+        - name: DATASTORE_HOST
+          value: quotes-store
+        - name: DATASTORE_PASS
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: quotes-store
+
+Edit the templates/configmap.yaml 
+
+{{- if .Values.quotes.import.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quotes-import-data
+data:
+  import_quotes.csv: |-
+    id|quote|author
+...output omitted...
+    8|Those who can imagine anything, can create the impossible.|Alan Turing
+{{- end }}
+
+
+helm template ./ --set quotes.import.enabled=false | grep "# Source\|templates/configmap.yaml"
+helm template --skip-tests ./ > ../kustomized-quotes/base/app.yaml
+
+cd ~/DO288/labs/multicontainer-review/kustomized-quotes
+
+Create the base/kustomization.yaml
+
+resources:
+- app.yaml
+
+oc kustomize base/
+
+Create the overlays/staging/kustomization.yaml 
+    bases:
+    - ../../base
+    patches:
+    - staging_dimensioning.yaml
+
+oc kustomize overlays/staging
+oc kustomize overlays/production
+
+oc apply -k overlays/staging
+oc get po
+
+curl famous-quotes-multicontainer-review.apps.ocp4.example.com/quotes/5
+
+lab grade multicontainer-review
+lab finish multicontainer-review
+
+
+Summary
+
+Templates are Red Hat OpenShift resources that you can use to parametrize Kubernetes resources.
+Use the oc new-app and oc process commands to render and deploy a template.
+Helm is a Kubernetes-native package manager that you can use to manage applications on OpenShift and Kubernetes.
+You can use Helm to template and package your Kubernetes resources.
+Kustomize is a Kubernetes resource packaging tool that is included in the kubectl and oc CLIs by default.
+Kustomize uses base resources that you can customize in overlays.
+Use the oc apply -k command to apply Kustomized resources.
+Choosing to use OpenShift Templates, Helm, Kustomize, or a combination of the tools depends on your needs and use-cases.
+
+Know how to:
+- Create an OpenShift template template
+- Create and use Helm charts
+- Customizing deployments with Kustomize
+- Use pre-existing templates written in either JSON or YAML format
+- Work with multi-container templates
+- Add custom parameters to a template

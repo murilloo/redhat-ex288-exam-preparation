@@ -1,0 +1,38 @@
+lab start deploy-review
+
+RHOCP 
+
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project deploy-review
+oc new-app --name=todo-list registry.ocp4.example.com:8443/redhattraining/openshift-dev-deploy-review-todo-list
+oc expose service/todo-list
+curl -s http://todo-list-deploy-review.apps.ocp4.example.com/todos
+
+RHOCP
+
+oc delete all -l app=todo-list
+oc new-app -e DB_PASSWORD=test --name=todo-list registry.ocp4.example.com:8443/redhattraining/openshift-dev-deploy-review-todo-list
+oc expose service/todo-list
+curl -i -H "Content-Type: application/json" http://todo-list-deploy-review.apps.ocp4.example.com/todos --data '{ "task": "do laundry" }'
+curl -s http://todo-list-deploy-review.apps.ocp4.example.com/todos; echo
+
+lab grade deploy-review
+lab finish deploy-review
+
+Summary
+
+You can use the web console or the oc and odo CLIs to deploy applications in Red Hat OpenShift.
+In the web console, the developer perspective streamlines the application development experience by providing multiple methods to deploy applications.
+These methods include deploying applications and services by using container images, Git repositories, Helm charts, or operator-backed services.
+You can apply these deployment methods from the developer perspective, or by using the CLIs.
+The administrator perspective of the web console focuses on cluster administration.
+The topology screen of the developer perspective displays deployed applications in a graph view.
+
+
+Know how to:
+- Manage applications with the web console
+- Create and work with multiple OpenShift projects
+- Create and deploy single container and multi-container applications from Git, specific from a directory, from an image, from stream
+- Use application health monitoring
+- Configure the OpenShift internal registry to meet specific requirements
+
