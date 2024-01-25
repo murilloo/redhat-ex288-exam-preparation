@@ -95,6 +95,11 @@ oc get -o json bc/hello-world-php | jq .spec.triggers[]
 oc describe bc/hello-world-php
 curl -X POST https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/php-hello-world/buildconfigs/hello-world-php/webhooks/JB3JoWiMoiwjLa5hODc5/generic
 
+s2i
+container: /usr/libexec/s2i
+repository: .s2i/bin
+oc new-app --name bonjour --context-dir labs/builds-s2i/s2i-scripts registry.ocp4.example.com:8443/ubi9/httpd-24~https://git.ocp4.example.com/developer/DO288-apps
+
 
 #
 # Chapter 5
