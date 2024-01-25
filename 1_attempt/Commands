@@ -57,18 +57,15 @@ oc get routes
 # Chapter 3
 #
 oc create secret generic quay-io-murillo --from-file .dockerconfigjson=${XDG_RUNTIME_DIR}/containers/auth.json --type kubernets.io/dockerconfigjson 
-oc describe secrets quay-io-murillo -o wide
-oc new-project images-registry
 oc create secret docker-registry wrong-registry-credentials --docker-server=quay.io --docker-username=developer --docker-password=developer --docker-email=murilloo@gmail.com
 oc secrets link default wrong-registry-credentials --for=pull
-oc create deployment --name hello-world quay.io/murill00/httpd2
+oc new-app --name hello-world quay.io/murill00/httpd2
 oc create secret docker-registry right-registry-credentials --docker-server=quay.io --docker-username=developer --docker-password=developer --docker-email=murilloo@gmail.com
 oc secrets link default right-registry-credentials --for=pull
+oc new-app deployment --name hello-world quay.io/murill00/httpd2
 oc get secrets
 oc extract secret/right-registry-credentials
 oc get -o json secret/right-registry-credentials
-
-oc import-image --help
 oc import-image httpd2 --confirm --all --reference-policy=local --scheduled=true --from quay.io/murill00/httpd2
 oc describe is/httpd2
 oc new-app --name httpd2 -i image-streams/httpd2
@@ -79,14 +76,36 @@ curl http://httpd2-image-stream-httpd-2.apps-crc.testing
 #
 # Chapter 4
 #
-
 oc create buildconfig --help
 oc new-app --name hello-world-php -i php:7.4-ubi8  https://github.com/murilloo/redhat-ex288-exam-preparation --context-dir php-helloworld
 edit bc/hello-world-php 
 oc start-build bc/hello-world-php 
-oc get ev 
 oc set build-hook -h
-oc set triggers deploy/hello-world
+oc set triggers deploy/hello-world-php
+oc set triggers deploy/hello-world-php --remove-all
+oc set triggers deploy/hello-world-php --from-image=image-stream/hello-world-php:latest -c hello-world-php
+oc set triggers deploy/hello-world-php --from-config=true 
 oc get -o json bc/hello-world-php | jq .spec.triggers[]
 oc describe bc/hello-world-php
 curl -X POST https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/php-hello-world/buildconfigs/hello-world-php/webhooks/JB3JoWiMoiwjLa5hODc5/generic
+
+
+#
+# Chapter 5
+#
+oc set env deployment postgresql-persistent -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb
+oc set volumes deployment/postgresql-persistent --add --type pvc --name postgresql-storage --claim-size 10Gi --claim-mode rwo --mount-path /var/lib/pgsql --claim-name postgresql-storage
+oc create secret generic mysql --from-literal=password=mypassword
+oc set env deployment mysql --prefix MYSQL_ROOT_ --from secret/mysql
+oc set volumes deployment/mysql --name mysql-pvc --add --type pvc --claim-size 1Gi --claim-mode rwo --mount-path /var/lib/mysql
+oc create cm wordpress-cm --from-literal=host=mariadb --from-literal=name=wordpress --from-literal=user=wordpress --from-literal=password=wordpress 
+oc set env deploy wordpress --prefix WORDPRESS_DATABASE_ --from configmap/wordpress-cm
+oc set volume dc/postgresql --add --name=postgresql-data -t pvc --claim-name=postgres-pvc --mount-path /var/lib/pgsql/data --overwrite
+oc set env deploy/expense-service QUARKUS_DATASOURCE_JDBC_URL='jdbc:postgresql://postgresql:5432/$(DATABASE_NAME)'
+oc set probe deploy/expense-service --liveness --get-url=http://:8080/q/health/live --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
+oc set probe deploy/expense-service --readiness --get-url=http://:8080/q/health/ready --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
+
+
+#
+# Chapter 6
+#
