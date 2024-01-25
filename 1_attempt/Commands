@@ -17,6 +17,13 @@ podman tag localhost/nodejs-hello-world quay.io/murill00/nodejs-hello-world
 podman push quay.io/murill00/nodejs-hello-world
 podman rmi $(podman images ps -qa)
 
+# Skopeo
+skopeo copy docker://quay.io/buildah/stable docker://registry.internal.company.com/buildah
+skopeo copy oci:busybox_ocilayout:latest dir:existingemptydirectory
+skopeo login --username USER myregistrydomain.com:5000
+skopeo inspect docker://myregistrydomain.com:5000/busybox
+
+
 #
 # Chapter 2
 #
