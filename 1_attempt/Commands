@@ -23,7 +23,6 @@ skopeo copy oci:busybox_ocilayout:latest dir:existingemptydirectory
 skopeo login --username USER myregistrydomain.com:5000
 skopeo inspect docker://myregistrydomain.com:5000/busybox
 
-
 #
 # Chapter 2
 #
