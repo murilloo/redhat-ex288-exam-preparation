@@ -98,8 +98,9 @@ curl -X POST https://api.crc.testing:6443/apis/build.openshift.io/v1/namespaces/
 s2i
 container: /usr/libexec/s2i
 repository: .s2i/bin
-oc new-app --name bonjour --context-dir labs/builds-s2i/s2i-scripts registry.ocp4.example.com:8443/ubi9/httpd-24~https://git.ocp4.example.com/developer/DO288-apps
 
+oc new-app --name bonjour --context-dir labs/builds-s2i/s2i-scripts registry.ocp4.example.com:8443/ubi9/httpd-24~https://git.ocp4.example.com/developer/DO288-apps
+oc new-app --name expense-service --strategy Docker --context-dir apps/builds-review/expense-service https://git.ocp4.example.com/developer/DO288-apps
 
 #
 # Chapter 5
