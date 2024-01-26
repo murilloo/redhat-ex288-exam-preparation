@@ -1,8 +1,7 @@
 FROM registry.access.redhat.com/ubi8/nodejs-18
 
-LABEL app=nodejs-demo-app
-
-MAINTAINER murilloo@gmail.com
+LABEL app=nodejs-demo-app \
+      author=murilloo@gmail.com
 
 WORKDIR /opt/app-root
 

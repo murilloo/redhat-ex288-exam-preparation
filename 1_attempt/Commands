@@ -116,7 +116,7 @@ oc set volume dc/postgresql --add --name=postgresql-data -t pvc --claim-name=pos
 oc set env deploy/expense-service QUARKUS_DATASOURCE_JDBC_URL='jdbc:postgresql://postgresql:5432/$(DATABASE_NAME)'
 oc set probe deploy/expense-service --liveness --get-url=http://:8080/q/health/live --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
 oc set probe deploy/expense-service --readiness --get-url=http://:8080/q/health/ready --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
-
+oc set volume deploy/myhttpd --add --configmap-name hello-world --type configmap --mount-path /var/www/html
 
 #
 # Chapter 6
