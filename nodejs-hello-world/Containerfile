@@ -1,4 +1,4 @@
-FROM nodejs18
+FROM registry.access.redhat.com/ubi8/nodejs-18
 
 LABEL app=nodejs-demo-app
 
