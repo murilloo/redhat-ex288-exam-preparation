@@ -107,17 +107,61 @@ oc new-app --name expense-service --strategy Docker --context-dir apps/builds-re
 #
 oc set env deployment postgresql-persistent -e POSTGRESQL_USER=redhat -e POSTGRESQL_PASSWORD=redhat123 -e POSTGRESQL_DATABASE=persistentdb
 oc set volumes deployment/postgresql-persistent --add --type pvc --name postgresql-storage --claim-size 10Gi --claim-mode rwo --mount-path /var/lib/pgsql --claim-name postgresql-storage
+oc set volume dc/postgresql --add --name=postgresql-data -t pvc --claim-name=postgres-pvc --mount-path /var/lib/pgsql/data --overwrite
 oc create secret generic mysql --from-literal=password=mypassword
 oc set env deployment mysql --prefix MYSQL_ROOT_ --from secret/mysql
 oc set volumes deployment/mysql --name mysql-pvc --add --type pvc --claim-size 1Gi --claim-mode rwo --mount-path /var/lib/mysql
 oc create cm wordpress-cm --from-literal=host=mariadb --from-literal=name=wordpress --from-literal=user=wordpress --from-literal=password=wordpress 
 oc set env deploy wordpress --prefix WORDPRESS_DATABASE_ --from configmap/wordpress-cm
-oc set volume dc/postgresql --add --name=postgresql-data -t pvc --claim-name=postgres-pvc --mount-path /var/lib/pgsql/data --overwrite
 oc set env deploy/expense-service QUARKUS_DATASOURCE_JDBC_URL='jdbc:postgresql://postgresql:5432/$(DATABASE_NAME)'
+oc set volume deploy/myhttpd --add --configmap-name hello-world --type configmap --mount-path /var/www/html
 oc set probe deploy/expense-service --liveness --get-url=http://:8080/q/health/live --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
 oc set probe deploy/expense-service --readiness --get-url=http://:8080/q/health/ready --timeout-seconds=1 --initial-delay-seconds=5 --success-threshold=1 --failure-threshold=1 --period-seconds=5
-oc set volume deploy/myhttpd --add --configmap-name hello-world --type configmap --mount-path /var/www/html
 
 #
 # Chapter 6
 #
+oc get templates -n openshift
+oc process --parameters jenkins-ephemeral  -n openshift
+oc adm create-bootstrap-project-template -o yaml > template.yaml
+oc new-app --template=teste-template -p ANNOTATIONS=wordpress -p APP=wordpress -p NAMESPACE=teste -p IMAGE=quai.io/teste
+
+helm search hub nginx
+helm search repo teste
+helm create helm-template
+helm template -s template/template.yaml .
+helm install --wait helm-template .
+
+
+mkdir kustomize; cd kustomize
+mkdir base; cd base
+oc new-app --name myhttp quay.io/murill00/my_httpd -o yaml > deployment.yaml
+
+cat <<EOF>> kustomization.yaml
+resources:
+- deployment.yaml
+EOF
+
+cd ../
+oc apply -k base
+
+mkdir -p overlays/dev
+cd overlays/dev
+
+cat <<EOF>> replicas_limits.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: replica-limit
+spec:
+  replicas: 2
+EOF
+
+cat <<EOF>> kustomization.yaml
+bases:
+- ../../base
+patches:
+- replica_limits.yaml
+EOF
+
+oc kustomize overlays/dev | grep "kind: Deployment"
