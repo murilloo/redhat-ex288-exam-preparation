@@ -1,8 +1,10 @@
 FROM registry.access.redhat.com/ubi9/ubi:latest
 
 ARG HTTP_PORT
+ARG REPO_URL
 
 ENV APP_PORT=${HTTP_PORT}
+ENV REPO_URL=${REPO_URL}
 
 RUN dnf install -y httpd && \
     dnf clean all && \
@@ -17,8 +19,10 @@ WORKDIR /var/www/html
 COPY index.html .
 
 # Add script
-COPY script.sh /bin
-RUN chmod +x /bin/script.sh
+#COPY script.sh /bin
+#RUN chmod +x /bin/script.sh
+
+ADD $REPO_URL /tmp/script.sh
 
 LABEL description="My httpd container application" \
       io.k8s.description="My httpd container application" \
