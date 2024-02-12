@@ -22,7 +22,7 @@ COPY index.html .
 #COPY script.sh /bin
 #RUN chmod +x /bin/script.sh
 
-ADD $REPO_URL /tmp/script.sh
+ADD ${REPO_URL} /tmp/script.sh
 
 LABEL description="My httpd container application" \
       io.k8s.description="My httpd container application" \
