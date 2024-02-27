@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "Changing HTTP port during BUILD..."
+env HTTP_PORT=3000
+
+exec /usr/libexec/s2i/assemble
+
+
